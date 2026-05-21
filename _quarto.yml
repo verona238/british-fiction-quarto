@@ -1,0 +1,33 @@
+project:
+  type: website
+  output-dir: docs
+
+render:
+  - index.qmd
+
+website:
+  title: "Стилометрия британской прозы"
+  navbar:
+    left:
+      - href: index.qmd
+        text: Атрибуция авторства
+
+format:
+  html:
+    theme:
+      - cosmo
+    css: styles.css
+    toc: true
+    toc-depth: 3
+    toc-location: left
+    code-fold: show
+    code-tools: true
+    number-sections: true
+    fig-align: center
+    df-print: paged
+    embed-resources: false
+
+execute:
+  warning: false
+  message: false
+  echo: true

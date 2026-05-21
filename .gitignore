@@ -1,0 +1,16 @@
+.Rproj.user/
+.Rhistory
+.RData
+.Ruserdata
+
+/.quarto/
+*_cache/
+*_files/
+/_freeze/
+
+/data/A_Small_Collection_of_British_Fiction.zip
+/data/A_Small_Collection_of_British_Fiction/
+/data/overview.tsv
+
+.DS_Store
+Thumbs.db
