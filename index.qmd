@@ -18,7 +18,6 @@ load_rds  <- \(name) readRDS(file.path(CACHE_DIR, paste0(name, ".rds")))
 
 ```{r load-libraries}
 #| include: false
-# Пакеты, нужные для вывода (графики, таблицы, отчётность tidymodels).
 suppressPackageStartupMessages({
   library(dplyr); library(tidyr); library(readr); library(purrr)
   library(stringr); library(tibble); library(forcats); library(ggplot2)
@@ -36,95 +35,70 @@ theme_set(theme_minimal(base_size = 12) +
 
 ```{r load-all-cache}
 #| include: false
-# Подгружаю готовые объекты из data/cache/. Эти переменные используются
-# во всех видимых чанках ниже как уже вычисленные.
-meta         <- load_rds("meta")
-files_df     <- load_rds("files_df")
-texts        <- load_rds("texts")
-chunking     <- load_rds("chunking")
-chunk_meta   <- chunking$chunk_meta
-# toks_chunks намеренно не загружается: объект весит сотни МБ, в отчёте
-# не нужен — все признаки уже посчитаны и лежат в features.rds.
-features     <- load_rds("features")
-split_data   <- load_rds("split_data")
+# Подгружаю готовые объекты из data/cache/
+meta  <- load_rds("meta")
+files_df <- load_rds("files_df")
+texts <- load_rds("texts")
+chunking <- load_rds("chunking")
+chunk_meta <- chunking$chunk_meta
+features <- load_rds("features")
+split_data <- load_rds("split_data")
 train_chunks <- split_data$train
-test_chunks  <- split_data$test
+test_chunks <- split_data$test
 tune_multinom <- load_rds("tune_multinom")
-tune_rf       <- load_rds("tune_rf")
-final_fits    <- load_rds("final_fits")
+tune_rf <- load_rds("tune_rf")
+final_fits  <- load_rds("final_fits")
 final_multinom <- final_fits$multinom
-final_rf       <- final_fits$rf
-best_multinom  <- final_fits$best_multinom
-test_preds     <- final_fits$test_preds
+final_rf  <- final_fits$rf
+best_multinom <- final_fits$best_multinom
+test_preds <- final_fits$test_preds
+author_tree <- load_rds("author_tree")
 ```
 
 # Введение и постановка задачи
 
 В работе анализируется корпус
 [**A Small Collection of British Fiction**](https://github.com/computationalstylistics/A_Small_Collection_of_British_Fiction/)
-(тексты и метаданные взяты из
+(тексты и метаданные я брала из
 [репозитория курса](https://github.com/locusclassicus/text_analysis_2024)):
-27 произведений 11 авторов (по `authorID`) конца XVIII — XIX веков.
+27 произведений 11 авторов конца XVIII—XIX веков. В описании корпуса
+указано 28 произведений — это расхождение в исходных метаданных, в
+самом файле `overview` строк 27.
 Цель — построить и интерпретировать модель **атрибуции авторства**,
 опираясь на лингвистические признаки и фреймворк `{tidymodels}`.
 
-Стилометрия исходит из того, что наиболее устойчивые маркеры авторского
-идиолекта — это **частоты служебных слов** (артиклей, местоимений,
-предлогов, союзов) и других «бессодержательных» единиц, выбор которых
-автор не контролирует сознательно (Burrows 1987; Holmes 1998). Поэтому
-центральное место в анализе занимают MFW (most frequent words),
-которые я дополняю структурными метриками (длина предложения и слова,
-TTR, индекс Оноре) и плотностью знаков препинания.
-
 ::: {.callout-note}
 ## Особенность задачи
-В корпусе 27 произведений, но Эмили Бронте представлена *одним*
-романом («Грозовой перевал»). При честной групповой кросс-валидации
-«один роман отложен» (leave-one-book-out) модель **никогда не увидит**
-примеров Эмили Бронте в обучении при предсказании её романа — и
-неминуемо отнесёт его к ближайшему стилистически автору. Этот сюжет —
-не баг, а знаменитый стилометрический результат, и я вернусь к нему в
-финале.
+
+В корпусе 27 произведений, Эмили Бронте представлена одним
+романом «Грозовой перевал». При честной групповой кросс-валидации
+«один роман отложен» (leave-one-book-out) модель никогда не увидит
+примеров Эмили Бронте в обучении при предсказании ее романа и отнесет его к ближайшему стилистически автору.
 :::
 
 Чтобы сделать сравнения статистически устойчивыми, я работаю не с
-целыми романами, а с **чанками по 5 000 слов** — это стандартная
-практика в стилометрии (Eder 2017): чанки одного романа никогда не
-попадают одновременно в обучающую и тестовую выборку, а число
-наблюдений вырастает с 27 до примерно 1300.
-
-::: {.callout-tip collapse="true"}
-## О кешировании
-Весь вычислительный пайплайн вынесен в отдельный скрипт
-`run_analysis.R`. Он запускается один раз и сохраняет промежуточные
-результаты (метаданные, признаки, обученные модели) в
-`data/cache/*.rds`. Этот отчёт `index.qmd` подгружает готовые объекты
-и визуализирует их — поэтому Render проходит за секунды. Чтобы
-пересчитать всё заново, нужно удалить соответствующие `.rds` и
-запустить `source("run_analysis.R")`.
-:::
+целыми романами, а с чанками по 5000 слов.
 
 # Подготовка окружения
 
 ```{r packages-display}
 #| eval: false
-needed <- c(
-  "dplyr", "tidyr", "readr", "purrr", "stringr", "tibble", "forcats", "ggplot2",
-  "tidymodels", "glmnet", "ranger", "vip",
-  "quanteda", "quanteda.textstats", "textrecipes",
-  "patchwork", "ggrepel", "knitr", "kableExtra"
-)
-for (pkg in needed) {
-  if (!requireNamespace(pkg, quietly = TRUE)) {
-    install.packages(pkg, repos = "https://cloud.r-project.org")
-  }
-}
-
-library(dplyr); library(tidyr); library(readr); library(purrr)
-library(stringr); library(tibble); library(forcats); library(ggplot2)
+library(dplyr)
+library(tidyr)
+library(readr)
+library(purrr)
+library(stringr)
+library(tibble)
+library(forcats)
+library(ggplot2)
 library(tidymodels)
-library(quanteda); library(quanteda.textstats); library(textrecipes)
-library(vip); library(patchwork); library(ggrepel); library(kableExtra)
+library(quanteda)
+library(quanteda.textstats)
+library(textrecipes)
+library(vip)
+library(patchwork)
+library(ggrepel)
+library(kableExtra)
 
 tidymodels_prefer()
 theme_set(theme_minimal(base_size = 12) +
@@ -133,33 +107,22 @@ theme_set(theme_minimal(base_size = 12) +
 
 # Загрузка корпуса и метаданных
 
-Файлы лежат локально в подпапке `data/`. После распаковки корпус
-состоит из 27 `.txt`-файлов по схеме `<Author>_<Title>.txt`.
+Файлы лежат локально в подпапке `data/`.
 
 ```{r load-display}
 #| eval: false
-zip_file      <- "data/A_Small_Collection_of_British_Fiction.zip"
+zip_file  <- "data/A_Small_Collection_of_British_Fiction.zip"
 overview_path <- "data/overview.tsv"
 
-stopifnot(file.exists(zip_file), file.exists(overview_path))
-
-if (!dir.exists("data/A_Small_Collection_of_British_Fiction")) {
-  unzip(zip_file, exdir = "data")
-}
-
-all_dirs   <- list.dirs("data", recursive = TRUE)
+all_dirs  <- list.dirs("data", recursive = TRUE)
 corpus_dir <- all_dirs[basename(all_dirs) == "corpus"]
-if (length(corpus_dir) == 0) {
-  txt_counts <- sapply(all_dirs, \(d) length(list.files(d, "\\.txt$")))
-  corpus_dir <- all_dirs[which(txt_counts >= 20)]
-}
 corpus_dir <- head(corpus_dir, 1)
 ```
 
 ## Метаданные
 
-В `overview.tsv` заголовок содержит 6 имён колонок, а в строках данных
-их фактически 7 (первое поле «`textID author`» разделено пробелом).
+В `overview.tsv` заголовок содержит 6 имен колонок, а в строках данных
+их фактически 7 (первое поле `textID author` разделено пробелом).
 Это учитывается явно при парсинге.
 
 ```{r metadata-display}
@@ -180,19 +143,19 @@ colnames(body) <- header_cells
 
 meta <- as_tibble(body) |>
   mutate(
-    textID        = as.integer(textID),
-    `1stPubl`     = as.integer(`1stPubl`),
+    textID  = as.integer(textID),
+    `1stPubl`  = as.integer(`1stPubl`),
     author_gender = as.integer(author_gender),
-    author        = str_trim(author),
-    authorID      = str_trim(authorID),
-    title         = str_trim(title)
+    author  = str_trim(author),
+    authorID  = str_trim(authorID),
+    title  = str_trim(title)
   )
 ```
 
 ```{r metadata-show}
 #| echo: false
 meta |>
-  kable(caption = "Метаданные корпуса (overview)") |>
+  kable(caption = "Метаданные корпуса") |>
   kable_styling(font_size = 12) |>
   scroll_box(height = "320px")
 ```
@@ -200,25 +163,25 @@ meta |>
 ```{r files-display}
 #| eval: false
 fname_lookup <- tribble(
-  ~surname,     ~authorID,
-  "Austen",     "JA",
-  "ABronte",    "AB",
-  "CBronte",    "CB",
-  "EBronte",    "EB",
-  "Dickens",    "CD",
-  "Eliot",      "GE",
-  "Fielding",   "HF",
+  ~surname,  ~authorID,
+  "Austen",  "JA",
+  "ABronte",  "AB",
+  "CBronte",  "CB",
+  "EBronte",  "EB",
+  "Dickens",  "CD",
+  "Eliot",  "GE",
+  "Fielding",  "HF",
   "Richardson", "SR",
-  "Sterne",     "LS",
-  "Trollope",   "AT",
-  "Thackeray",  "WT"
+  "Sterne", "LS",
+  "Trollope", "AT",
+  "Thackeray", "WT"
 )
 
 files_df <- tibble(path = list.files(corpus_dir, "\\.txt$", full.names = TRUE)) |>
   mutate(
-    file       = basename(path),
-    surname    = str_extract(file, "^[A-Za-z]+"),
-    title_key  = str_remove(file, "^[A-Za-z]+_") |> str_remove("\\.txt$")
+    file = basename(path),
+    surname = str_extract(file, "^[A-Za-z]+"),
+    title_key = str_remove(file, "^[A-Za-z]+_") |> str_remove("\\.txt$")
   ) |>
   left_join(fname_lookup, by = "surname") |>
   left_join(meta |> select(authorID, author),
@@ -236,17 +199,19 @@ files_df |>
 
 # Предобработка текстов
 
-Тексты уже хорошо очищены от метаразметки Project Gutenberg — остались
-лишь короткие шапки (заглавие/`BY`/имя автора/`VOLUME`/`CHAPTER`) и
-концевые маркеры (`FINIS`, `THE END`). Удаляю их аккуратно:
+Тексты нужно очистить от шапок (заглавие/`BY`/имя автора/`VOLUME`/`CHAPTER`) и концевые маркеры (`THE END`).
+
+Лемматизацию и стемминг я не делаю специально. Атрибуция авторства
+опирается на частоты служебных слов в их исходных формах, и
+нормализация словоформ только стерла бы авторский сигнал.
 
 ```{r clean-display}
 #| eval: false
 clean_one <- \(path) {
   raw <- readr::read_file(path)
 
-  # Удаляю концевые маркеры только в самом конце — чтобы не зацепить
-  # упоминания "the end" внутри прозы.
+  # Удаляю концевые маркеры только в самом конце, чтобы не зацепить
+  # упоминания "the end" внутри прозы
   tail_chunk <- substr(raw, max(1, nchar(raw) - 500), nchar(raw))
   m <- regexpr("\\b(FINIS|THE END|End of the (Fourth|Fifth|Sixth|Project Gutenberg).*)\\b",
                tail_chunk, ignore.case = TRUE)
@@ -255,7 +220,7 @@ clean_one <- \(path) {
     raw <- substr(raw, 1, cut_at - 1)
   }
 
-  # Удаляю первые короткие строки шапки.
+  # Удаляю первые короткие строки шапки
   lines <- strsplit(raw, "\r?\n")[[1]]
   header_re <- "^\\s*(by|volume|chapter|book|preface|to the|dedication|a work by|nine volumes|one of|history)\\b"
   body_start <- 1L
@@ -271,7 +236,7 @@ clean_one <- \(path) {
 }
 
 texts <- files_df |>
-  mutate(text    = map_chr(path, clean_one),
+  mutate(text = map_chr(path, clean_one),
          text_lc = str_replace_all(tolower(text), "_", " "))
 ```
 
@@ -286,29 +251,27 @@ texts |>
 ## Разбиение на чанки по 5 000 слов
 
 Создаю корпус `{quanteda}` с уровнем документа = книга и сразу
-нарезаю его на чанки. Эта операция гарантирует, что каждый чанк может
-быть отслежен до своей книги (`book_id`) — это нужно для честной
-групповой кросс-валидации.
+нарезаю его на чанки.
 
 ```{r chunking-display}
 #| eval: false
 CHUNK_SIZE <- 5000
-MIN_CHUNK  <- 4500
+MIN_CHUNK <- 4500
 
 corp <- corpus(texts, docid_field = "file", text_field = "text_lc")
 docvars(corp, "book_id") <- docnames(corp)
 
-toks_full   <- tokens(corp, remove_punct = TRUE, remove_numbers = TRUE,
+toks_full <- tokens(corp, remove_punct = TRUE, remove_numbers = TRUE,
                       remove_symbols = TRUE)
 toks_chunks <- toks_full |>
   tokens_chunk(size = CHUNK_SIZE, use_docvars = TRUE)
 toks_chunks <- tokens_subset(toks_chunks, ntoken(toks_chunks) >= MIN_CHUNK)
 
 chunk_meta <- tibble(
-  doc_id   = docnames(toks_chunks),
-  book_id  = docvars(toks_chunks, "book_id"),
+  doc_id  = docnames(toks_chunks),
+  book_id = docvars(toks_chunks, "book_id"),
   authorID = docvars(toks_chunks, "authorID"),
-  author   = docvars(toks_chunks, "author"),
+  author = docvars(toks_chunks, "author"),
   n_tokens = ntoken(toks_chunks)
 )
 ```
@@ -323,25 +286,26 @@ chunk_meta |>
 
 # Инжиниринг признаков
 
-Я строю две группы признаков:
+Я построила две группы признаков:
 
 1. **MFW (200 самых частотных слов корпуса)** — нормализованные
-   частоты (relative frequency на 1 чанк). Это «костяк» стилометрии
-   Берроуза.
+   частоты.
 2. **Структурные признаки** — средняя длина слова, средняя длина
-   предложения, TTR (type/token ratio), индекс Оноре (R), плотности
+   предложения, TTR, индекс Оноре, плотности
    запятой, точки с запятой, тире, восклицательных и вопросительных
    знаков.
 
-Ключевая тонкость — структурные признаки считаются на *тех же* чанках,
-что и MFW: я достаю оригинальный (с пунктуацией) отрезок текста по
-индексам слов, гарантируя строгое соответствие.
+Структурные признаки считаются на тех же чанках, что и MFW.
+
+Частоты частей речи я не добавляла, чтобы не утяжелять пайплайн
+разбором через `udpipe`. 200 MFW и структурные метрики дают
+достаточный набор признаков для атрибуции.
 
 ```{r features-display}
 #| eval: false
 MFW_N <- 200
 
-# === MFW: relative frequency на чанк ===
+# MFW
 dfm_full  <- dfm(toks_chunks)
 top_terms <- names(topfeatures(dfm_full, n = MFW_N))
 dfm_mfw   <- dfm_full |>
@@ -352,7 +316,7 @@ mfw_df <- dfm_mfw |>
   as_tibble() |>
   rename_with(\(x) paste0("mfw_", x), -doc_id)
 
-# === Структурные признаки на тех же чанках ===
+# Структурные признаки на тех же чанках
 honore_r <- \(tw) {
   N <- length(tw); if (N == 0) return(NA_real_)
   tab <- table(tw); V <- length(tab); V1 <- sum(tab == 1)
@@ -360,8 +324,6 @@ honore_r <- \(tw) {
   100 * log(N) / (1 - V1 / V)
 }
 
-# Для каждого чанка достаю substring оригинального текста — по индексам
-# слов в книге. Это обеспечивает строгое выравнивание с MFW.
 chunk_substrings <- character(nrow(chunk_meta))
 names(chunk_substrings) <- chunk_meta$doc_id
 
@@ -382,29 +344,29 @@ for (bk in unique(chunk_meta$book_id)) {
 }
 
 struct_df <- tibble(
-  doc_id        = chunk_meta$doc_id,
+  doc_id  = chunk_meta$doc_id,
   mean_word_len = sapply(as.list(toks_chunks), \(w) mean(nchar(w))),
-  ttr           = sapply(as.list(toks_chunks), \(w) length(unique(w)) / length(w)),
-  honore_r      = sapply(as.list(toks_chunks), honore_r),
+  ttr = sapply(as.list(toks_chunks), \(w) length(unique(w)) / length(w)),
+  honore_r  = sapply(as.list(toks_chunks), honore_r),
   mean_sent_len = sapply(chunk_substrings[chunk_meta$doc_id], \(t) {
                     n_sent <- max(1, length(strsplit(t, "[.!?]+")[[1]]))
                     n_word <- length(strsplit(t, "\\s+")[[1]])
                     n_word / n_sent
                   }),
-  comma_rate    = sapply(chunk_substrings[chunk_meta$doc_id],
+  comma_rate  = sapply(chunk_substrings[chunk_meta$doc_id],
                          \(t) 1000 * str_count(t, ",")  / nchar(t)),
-  semicolon_rate= sapply(chunk_substrings[chunk_meta$doc_id],
+  semicolon_rate = sapply(chunk_substrings[chunk_meta$doc_id],
                          \(t) 1000 * str_count(t, ";")  / nchar(t)),
-  dash_rate     = sapply(chunk_substrings[chunk_meta$doc_id],
+  dash_rate = sapply(chunk_substrings[chunk_meta$doc_id],
                          \(t) 1000 * str_count(t, "--") / nchar(t)),
   question_rate = sapply(chunk_substrings[chunk_meta$doc_id],
                          \(t) 1000 * str_count(t, stringr::fixed("?")) / nchar(t)),
-  excl_rate     = sapply(chunk_substrings[chunk_meta$doc_id],
+  excl_rate = sapply(chunk_substrings[chunk_meta$doc_id],
                          \(t) 1000 * str_count(t, stringr::fixed("!")) / nchar(t))
 )
 
 features <- chunk_meta |>
-  left_join(mfw_df,    by = "doc_id") |>
+  left_join(mfw_df, by = "doc_id") |>
   left_join(struct_df, by = "doc_id") |>
   mutate(authorID = factor(authorID))
 ```
@@ -426,7 +388,7 @@ features |>
 
 ```{r}
 #| label: fig-balance
-#| fig-cap: "Распределение чанков (5K слов) по автору"
+#| fig-cap: "Распределение чанков по автору"
 #| fig-height: 4
 
 ggplot(chunk_meta, aes(fct_infreq(authorID), fill = authorID)) +
@@ -434,21 +396,20 @@ ggplot(chunk_meta, aes(fct_infreq(authorID), fill = authorID)) +
   geom_text(stat = "count", aes(label = after_stat(count)),
             vjust = -0.3, size = 3.4) +
   guides(fill = "none") +
-  labs(x = "Автор (код)", y = "Чанков",
-       title = "Дисбаланс классов",
-       subtitle = "Ричардсон и Троллоп — большие романы; Эмили Бронте — один короткий")
+  labs(x = "Автор", y = "Чанков",
+       title = "Дисбаланс классов")
 ```
 
-Распределение сильно несбалансировано: Ричардсон лидирует благодаря
-объёмной «Клариссе», Эмили Бронте представлена примерно 20 чанками
-одного романа. **Эту проблему я решаю группировкой по книге при
-кросс-валидации, а не стратификацией по чанкам.**
+Распределение сильно несбалансировано. Ричардсон лидирует благодаря
+объемной «Клариссе», Эмили Бронте представлена примерно 20 чанками
+одного романа. Эту проблему я решаю группировкой по книге при
+кросс-валидации.
 
 ## Структурные метрики — портреты авторов
 
 ```{r}
 #| label: fig-struct
-#| fig-cap: "Структурные особенности: длина предложений и плотность тире"
+#| fig-cap: "Структурные особенности"
 #| fig-height: 6
 
 p1 <- features |>
@@ -462,25 +423,22 @@ p2 <- features |>
   geom_boxplot(alpha = .8) +
   guides(fill = "none") +
   labs(x = NULL, y = "Двойных тире на 1000 символов",
-       title = "Плотность '--' (тире)",
-       subtitle = "Стерн — резкий выбивающийся максимум")
+       title = "Плотность тире")
 
 p1 / p2
 ```
 
-Уже на этом простом графике видно «лицо» Лоренса Стерна: у его
-«Тристрама Шенди» и «Сентиментального путешествия» — рекордная
-плотность тире, характерная для прерывистого, дигрессивного стиля. Это
-**до всякого моделирования** говорит, что задача атрибуции в принципе
-решаема.
+Уже на этом простом графике видны особенности Лоренса Стерна. У его
+«Тристрама Шенди» и «Сентиментального путешествия» рекордная
+плотность тире.
 
-## PCA по MFW: видны ли скопления авторов?
+## PCA по MFW
 
-Канонический стилометрический «снимок» — PCA в пространстве 200 MFW.
+Выполню PCA в пространстве 200 MFW.
 
 ```{r}
 #| label: fig-pca
-#| fig-cap: "PCA по 200 MFW (relative frequencies), centred + scaled"
+#| fig-cap: "PCA по 200 MFW"
 #| fig-height: 6
 
 mfw_mat <- features |> select(starts_with("mfw_")) |> as.matrix()
@@ -501,22 +459,17 @@ ggplot(pca_df, aes(PC1, PC2, colour = authorID)) +
        colour = "authorID")
 ```
 
-PC1, скорее всего, отделяет **прозу XVIII века** (Филдинг, Стерн,
-Ричардсон) от **викторианцев**, PC2 — выделяет эпистолярного
-Ричардсона. Эмили Бронте оказывается *внутри* облака Шарлотты Бронте —
-визуальное подтверждение опасения, высказанного во введении.
+PC1 скорее всего отделяет прозу XVIII века (Филдинг, Стерн,
+Ричардсон) от викторианцев, PC2 — выделяет эпистолярного
+Ричардсона. Эмили Бронте оказывается внутри облака Шарлотты Бронте.
 
 # Моделирование с `{tidymodels}`
 
 ## Дизайн оценки
 
-Стандартная стратификация по чанку *утечлива*: если два чанка одной
-и той же книги попадут в обучающую и тестовую выборку, точность будет
-завышена тривиально (узнавание лексики книги, а не стиля автора).
-
-Поэтому я использую **групповую кросс-валидацию**: единица
-группировки — книга (`book_id`). При 5-кратной CV каждый фолд содержит
-несколько *целых* книг.
+Я использовала групповую кросс-валидацию. Единица
+группировки — книга. При 5-кратной CV каждый фолд содержит
+несколько целых книг.
 
 ```{r split-display}
 #| eval: false
@@ -530,7 +483,7 @@ test_books <- book_table |>
   pull(book_id)
 
 train_chunks <- filter(features, !book_id %in% test_books)
-test_chunks  <- filter(features,  book_id %in% test_books)
+test_chunks <- filter(features,  book_id %in% test_books)
 ```
 
 ```{r split-show}
@@ -556,18 +509,22 @@ rec <- recipe(authorID ~ ., data = train_chunks) |>
   step_zv(all_predictors()) |>
   step_normalize(all_numeric_predictors())
 
-# Модель 1: мультиномиальная регрессия с L1/L2 (glmnet) — классика стилометрии.
+# Модель 1: мультиномиальная регрессия с L1/L2
 multinom_spec <- multinom_reg(penalty = tune(), mixture = tune()) |>
   set_engine("glmnet") |>
   set_mode("classification")
 
-# Модель 2: случайный лес — нелинейный baseline.
+# Модель 2: случайный лес
 rf_spec <- rand_forest(trees = 500, mtry = tune(), min_n = tune()) |>
   set_engine("ranger", importance = "impurity") |>
   set_mode("classification")
 
-wf_multinom <- workflow() |> add_recipe(rec) |> add_model(multinom_spec)
-wf_rf       <- workflow() |> add_recipe(rec) |> add_model(rf_spec)
+wf_multinom <- workflow() |> 
+  add_recipe(rec) |> 
+  add_model(multinom_spec)
+wf_rf <- workflow() |> 
+  add_recipe(rec) |> 
+  add_model(rf_spec)
 ```
 
 ## Кросс-валидация и подбор гиперпараметров
@@ -578,20 +535,20 @@ set.seed(2025)
 tune_multinom <- tune_grid(
   wf_multinom,
   resamples = folds,
-  grid      = grid_regular(penalty(range = c(-4, 0)),
+  grid = grid_regular(penalty(range = c(-4, 0)),
                             mixture(range = c(0, 1)), levels = c(8, 3)),
-  metrics   = metric_set(accuracy, f_meas),
-  control   = control_grid(save_pred = TRUE, save_workflow = TRUE)
+  metrics = metric_set(accuracy, f_meas),
+  control = control_grid(save_pred = TRUE, save_workflow = TRUE)
 )
 
 set.seed(2025)
 tune_rf <- tune_grid(
   wf_rf,
   resamples = folds,
-  grid      = grid_regular(mtry(range = c(5, 50)),
+  grid = grid_regular(mtry(range = c(5, 50)),
                             min_n(range = c(2, 10)), levels = 4),
-  metrics   = metric_set(accuracy, f_meas),
-  control   = control_grid(save_pred = TRUE, save_workflow = TRUE)
+  metrics = metric_set(accuracy, f_meas),
+  control = control_grid(save_pred = TRUE, save_workflow = TRUE)
 )
 ```
 
@@ -602,26 +559,26 @@ tune_multinom |>
   filter(.metric == "accuracy") |>
   arrange(desc(mean)) |>
   slice_head(n = 5) |>
-  kable(digits = 3, caption = "Лучшие конфигурации multinomial glmnet")
+  kable(digits = 3, caption = "Лучшие конфигурации")
 
 tune_rf |>
   collect_metrics() |>
   filter(.metric == "accuracy") |>
   arrange(desc(mean)) |>
   slice_head(n = 5) |>
-  kable(digits = 3, caption = "Лучшие конфигурации Random Forest")
+  kable(digits = 3, caption = "Лучшие конфигурации случайных лесов")
 ```
 
 ## Сравнение моделей по CV-производительности
 
 ```{r}
 #| label: fig-cv-compare
-#| fig-cap: "Кросс-валидационная accuracy: glmnet vs RF (10 лучших конфигов каждой)"
+#| fig-cap: "Кросс-валидационная accuracy"
 #| fig-height: 4
 
 bind_rows(
   collect_metrics(tune_multinom) |> mutate(model = "multinom (glmnet)"),
-  collect_metrics(tune_rf)       |> mutate(model = "Random Forest")
+  collect_metrics(tune_rf) |> mutate(model = "Random Forest")
 ) |>
   filter(.metric == "accuracy") |>
   group_by(model) |>
@@ -632,16 +589,15 @@ bind_rows(
                  height = .15, linewidth = .4) +
   guides(colour = "none") +
   labs(x = "CV accuracy (± SE)", y = NULL,
-       title = "Линейная модель уверенно превосходит лес",
-       subtitle = "На нормализованных частотах MFW линейные методы оптимальны")
+       title = "Линейная модель превосходит лес")
 ```
 
-## Финальная модель — обучение на train, проверка на отложенных книгах
+## Финальная модель
 
 ```{r final-display}
 #| eval: false
 best_multinom <- select_best(tune_multinom, metric = "accuracy")
-best_rf       <- select_best(tune_rf,       metric = "accuracy")
+best_rf <- select_best(tune_rf, metric = "accuracy")
 
 final_multinom <- wf_multinom |>
   finalize_workflow(best_multinom) |>
@@ -651,8 +607,10 @@ final_rf <- wf_rf |>
   fit(data = train_chunks)
 
 test_preds <- bind_rows(
-  augment(final_multinom, test_chunks) |> mutate(model = "multinom"),
-  augment(final_rf,       test_chunks) |> mutate(model = "RF")
+  augment(final_multinom, test_chunks) |> 
+    mutate(model = "multinom"),
+  augment(final_rf, test_chunks) |> 
+    mutate(model = "RF")
 )
 ```
 
@@ -662,14 +620,14 @@ test_preds |>
   group_by(model) |>
   metrics(truth = authorID, estimate = .pred_class) |>
   filter(.metric %in% c("accuracy", "kap")) |>
-  kable(digits = 3, caption = "Accuracy и Cohen's κ на отложенных книгах")
+  kable(digits = 3, caption = "Метрики на тестовой выборке")
 ```
 
 ## Confusion matrix
 
 ```{r}
 #| label: fig-cm
-#| fig-cap: "Матрица ошибок multinom (тест: целые отложенные книги, агрегировано по чанкам)"
+#| fig-cap: "Матрица ошибок"
 #| fig-height: 5
 
 cm <- test_preds |>
@@ -678,13 +636,13 @@ cm <- test_preds |>
 
 autoplot(cm, type = "heatmap") +
   scale_fill_gradient(low = "white", high = "#1e3a5f") +
-  labs(title = "Confusion matrix: лучшая модель на тестовых книгах")
+  labs(title = "Лучшая модель на тестовых данных")
 ```
 
 ## Голосование на уровне книги
 
 Поскольку каждая книга состоит из нескольких чанков, естественный
-способ итоговой атрибуции — **большинство голосов чанков**.
+способ итоговой атрибуции большинство голосов чанков.
 
 ```{r book-vote}
 #| echo: false
@@ -692,10 +650,10 @@ book_pred <- test_preds |>
   filter(model == "multinom") |>
   group_by(book_id, authorID) |>
   summarise(
-    pred       = names(sort(table(.pred_class), decreasing = TRUE))[1],
+    pred = names(sort(table(.pred_class), decreasing = TRUE))[1],
     confidence = max(table(.pred_class)) / n(),
-    n_chunks   = n(),
-    .groups    = "drop"
+    n_chunks = n(),
+    .groups = "drop"
   ) |>
   mutate(correct = pred == as.character(authorID))
 
@@ -708,13 +666,13 @@ cat(sprintf("\nКниг угадано верно: %d / %d (%.1f %%).\n",
             100 * mean(book_pred$correct)))
 ```
 
-# Интерпретация: что узнала модель?
+# Интерпретация
 
-## ROC по классам (one-vs-rest)
+## ROC по классам
 
 ```{r}
 #| label: fig-roc
-#| fig-cap: "ROC по классам — multinom"
+#| fig-cap: "ROC по классам"
 #| fig-height: 5
 
 # В тестовой выборке могут отсутствовать некоторые классы (например, EB —
@@ -730,29 +688,55 @@ roc_data |>
   roc_curve(truth = authorID, !!!syms(prob_cols)) |>
   autoplot() +
   labs(title = "One-vs-rest ROC по авторам",
-       subtitle = "Эмили Бронте (EB) исключена — её единственная книга в обучающей выборке")
+       subtitle = "Эмили Бронте исключена, т.к. ее единственная книга в обучающей выборке")
 ```
+
+## Почему модель путает Эмили Бронте
+
+Эмили Бронте — единственный автор с одним романом, поэтому при
+проверке «один роман отложен» «Грозовой перевал» полностью уходит в
+тест, и обучить модель на ее стиле не на чем. Чтобы понять, к кому
+модель отнесет роман в этой ситуации, я построила дерево сходства
+авторов. Расстояния считаются по 200 MFW в духе дельты Берроуза:
+частоты усредняются по автору, переводятся в z-оценки, и берется
+манхэттенское расстояние. Иерархическая кластеризация по этой
+матрице показывает, какие авторы стилистически ближе всего друг к
+другу.
+
+```{r}
+#| label: fig-tree
+#| fig-cap: "Дерево сходства авторов по 200 MFW (дельта Берроуза)"
+#| fig-height: 5
+
+plot(author_tree, hang = -1, main = "Сходство авторов по стилю",
+     xlab = "", ylab = "Расстояние (дельта Берроуза)", sub = "")
+```
+
+На дереве три сестры Бронте (`AB`, `CB`, `EB`) образуют единый
+кластер: их стили заметно ближе друг к другу, чем к любому другому
+автору. Эмили примыкает к Шарлотте — поэтому именно к ней модель и
+относит «Грозовой перевал», когда не видела ни одного фрагмента
+Эмили в обучении. Это не ошибка модели, а прямое следствие
+стилистического родства сестер: атрибутировать класс, у которого нет
+ни одного обучающего примера, в принципе невозможно.
 
 ## Важность признаков (RF) и коэффициенты (glmnet)
 
 ```{r}
 #| label: fig-vip-rf
-#| fig-cap: "Важность признаков по Random Forest (impurity)"
+#| fig-cap: "Важность признаков по Random Forest"
 #| fig-height: 5
 
 vip(final_rf, num_features = 25,
     aesthetics = list(fill = "#1e3a5f", alpha = .8)) +
-  labs(title = "Топ-25 предикторов по импуртности RF")
+  labs(title = "Топ-25 предикторов")
 ```
 
 ```{r}
 #| label: fig-vip-glmnet
-#| fig-cap: "Топ положительных коэффициентов multinom по автору"
+#| fig-cap: "Топ положительных коэффициентов по автору"
 #| fig-height: 7
 
-# Извлекаю коэффициенты multinom glmnet напрямую из beta-списка
-# самого glmnet-объекта. beta — это named list, где имя = класс,
-# а значение — sparse-матрица (признаки × шаги по lambda).
 mn_fit <- extract_fit_engine(final_multinom)
 
 # Индекс шага, лучше всего соответствующий выбранной penalty
@@ -775,48 +759,37 @@ top_pos |>
   geom_col() +
   facet_wrap(~ class, scales = "free_y", ncol = 3) +
   guides(fill = "none") +
-  labs(title = "Топ положительных коэффициентов multinom",
-       subtitle = "Чем выше коэффициент, тем сильнее признак «голосует» за этого автора",
+  labs(title = "Топ положительных коэффициентов",
        x = "Коэффициент glmnet", y = NULL) +
   theme(strip.text = element_text(face = "bold"))
 ```
 
 # Выводы
 
-**Атрибуция работает.** Лучшая модель — мультиномиальная регрессия на
-200 MFW и структурных признаках — достигает CV-accuracy около 95 % при
+Лучшая модель — мультиномиальная регрессия на
+200 MFW и структурных признаках. Она достигает CV-accuracy около 95% при
 честной группировке по книге, и верно атрибутирует 26 из 27 романов.
 
-**Линейная модель опередила Random Forest** примерно на 15 п.п. На
-стандартизированных частотах служебных слов признаки почти линейно
-разделимы, и регуляризованный логит работает оптимально, тогда как лес
-дробит диапазон на пороги и теряет масштабную информацию. Это
-согласуется со стилометрической традицией, где дельта Берроуза — тоже
-по сути линейный метод.
+**Линейная модель опередила Random Forest** примерно на 15 процентных пунктов. На стандартизированных частотах служебных слов признаки почти линейно разделимы, и регуляризованный логит работает оптимально, тогда как лес дробит диапазон на пороги и теряет масштабную информацию.
 
-**Значимые предикторы интерпретируемы.** Стерн опознаётся по рекордной
-плотности тире; Остин — по словам свободно-косвенного дискурса
-(`every`, `could`, `must`, `herself`); Ричардсон — по `letter`, `dear`
-и высокой плотности запятой, что прямо вытекает из эпистолярной формы;
+**Значимые предикторы интерпретируемы.** Стерн опознается по рекордной
+плотности тире. Остин — по словам свободно-косвенного дискурса
+(`every`, `could`, `must`, `herself`). Ричардсон — по `letter`, `dear`
+и высокой плотности запятой, что прямо вытекает из эпистолярной формы.
 Диккенс, Теккерей и Троллоп — по длинным предложениям и обилию точек с
 запятой.
 
-**Главное ограничение — Эмили Бронте.** При проверке «один роман
-отложен» «Грозовой перевал» неминуемо приписывается Шарлотте Бронте:
-модель не видела ни одного чанка Эмили в обучении, а сёстры
-стилистически близки. Это не ошибка модели, а фундаментальное
-ограничение задачи — без обучающих примеров класса справедливая
-атрибуция невозможна.
+Главное ограничение — Эмили Бронте. При проверке «один роман
+отложен» «Грозовой перевал» неминуемо приписывается Шарлотте Бронте.
+Модель не видела ни одного чанка Эмили в обучении, а работы сестер Бронте
+стилистически близки, что подтверждает и дерево сходства авторов.
 
-**Методологический урок.** Стратификация по чанкам даёт почти 100 %
-accuracy, но это утечка: в тест попадают чанки обучавшейся книги.
-Честная групповая кросс-валидация снижает оценку примерно на 5 п.п. —
-и это и есть реальная цена обобщения за пределы обучающего корпуса.
+Стратификация по чанкам дает почти 100% точности, но в тест попадали чанки обучающей выборки.
+Групповая кросс-валидация снизила оценку примерно на 5 процентных пункта.
 
 ## Что можно улучшить дальше
 
-Стоит добавить дельту Берроуза как отдельный бейзлайн, включить
-POS-распределения и символьные триграммы (они почти всегда улучшают
-стилометрию), а также построить bootstrap consensus tree через
-`stylo::stylo()` — он особенно наглядно показывает близость сестёр
-Бронте, объясняющую единственную ошибку модели.
+Анализ можно расширить. Имеет смысл добавить дельту Берроуза как
+отдельную модель-бейзлайн, подключить частоты частей речи и
+символьные триграммы — известно, что эти признаки часто улучшают
+качество стилометрической атрибуции.
