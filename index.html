@@ -2,7 +2,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml" lang="ru" xml:lang="ru"><head>
 
 <meta charset="utf-8">
-<meta name="generator" content="quarto-1.9.37">
+<meta name="generator" content="quarto-1.9.38">
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
@@ -75,7 +75,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <script src="site_libs/quarto-html/tippy.umd.min.js"></script>
 <script src="site_libs/quarto-html/anchor.min.js"></script>
 <link href="site_libs/quarto-html/tippy.css" rel="stylesheet">
-<link href="site_libs/quarto-html/quarto-syntax-highlighting-7f8f88aac4f3542376d5c11b86a4c14d.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<link href="site_libs/quarto-html/quarto-syntax-highlighting-15634bcf2e68342d4ad2dfa704d543f6.css" rel="stylesheet" id="quarto-text-highlighting-styles">
 <script src="site_libs/bootstrap/bootstrap.min.js"></script>
 <link href="site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
 <link href="site_libs/bootstrap/bootstrap-3e7735b7b22659e5fa437aca0bb49075.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
@@ -184,10 +184,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   <li><a href="#почему-модель-путает-эмили-бронте" id="toc-почему-модель-путает-эмили-бронте" class="nav-link" data-scroll-target="#почему-модель-путает-эмили-бронте"><span class="header-section-number">8.2</span> Почему модель путает Эмили Бронте</a></li>
   <li><a href="#важность-признаков-rf-и-коэффициенты-glmnet" id="toc-важность-признаков-rf-и-коэффициенты-glmnet" class="nav-link" data-scroll-target="#важность-признаков-rf-и-коэффициенты-glmnet"><span class="header-section-number">8.3</span> Важность признаков (RF) и коэффициенты (glmnet)</a></li>
   </ul></li>
-  <li><a href="#выводы" id="toc-выводы" class="nav-link" data-scroll-target="#выводы"><span class="header-section-number">9</span> Выводы</a>
-  <ul class="collapse">
-  <li><a href="#что-можно-улучшить-дальше" id="toc-что-можно-улучшить-дальше" class="nav-link" data-scroll-target="#что-можно-улучшить-дальше"><span class="header-section-number">9.1</span> Что можно улучшить дальше</a></li>
-  </ul></li>
+  <li><a href="#выводы" id="toc-выводы" class="nav-link" data-scroll-target="#выводы"><span class="header-section-number">9</span> Выводы</a></li>
   </ul>
 </nav>
 </nav>
@@ -218,7 +215,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     <div>
     <div class="quarto-title-meta-heading">Дата публикации</div>
     <div class="quarto-title-meta-contents">
-      <p class="date">24 мая 2026</p>
+      <p class="date">25 мая 2026</p>
     </div>
   </div>
   
@@ -1670,8 +1667,25 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <div class="cell">
 <details open="" class="code-fold">
 <summary>Код</summary>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb23"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(author_tree, <span class="at">hang =</span> <span class="sc">-</span><span class="dv">1</span>, <span class="at">main =</span> <span class="st">"Сходство авторов по стилю"</span>,</span>
-<span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a>     <span class="at">xlab =</span> <span class="st">""</span>, <span class="at">ylab =</span> <span class="st">"Расстояние (дельта Берроуза)"</span>, <span class="at">sub =</span> <span class="st">""</span>)</span></code></pre></div><button title="Скопировать текст" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb23"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Сёстры Бронте выделяются цветом, остальные авторы — серым.</span></span>
+<span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a>bronte <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">"AB"</span>, <span class="st">"CB"</span>, <span class="st">"EB"</span>)</span>
+<span id="cb23-3"><a href="#cb23-3" aria-hidden="true" tabindex="-1"></a>dend <span class="ot">&lt;-</span> <span class="fu">as.dendrogram</span>(author_tree)</span>
+<span id="cb23-4"><a href="#cb23-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb23-5"><a href="#cb23-5" aria-hidden="true" tabindex="-1"></a>colour_leaf <span class="ot">&lt;-</span> \(node) {</span>
+<span id="cb23-6"><a href="#cb23-6" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (<span class="fu">is.leaf</span>(node)) {</span>
+<span id="cb23-7"><a href="#cb23-7" aria-hidden="true" tabindex="-1"></a>    lab <span class="ot">&lt;-</span> <span class="fu">attr</span>(node, <span class="st">"label"</span>)</span>
+<span id="cb23-8"><a href="#cb23-8" aria-hidden="true" tabindex="-1"></a>    col <span class="ot">&lt;-</span> <span class="cf">if</span> (lab <span class="sc">%in%</span> bronte) <span class="st">"#c0392b"</span> <span class="cf">else</span> <span class="st">"#1e3a5f"</span></span>
+<span id="cb23-9"><a href="#cb23-9" aria-hidden="true" tabindex="-1"></a>    <span class="fu">attr</span>(node, <span class="st">"nodePar"</span>) <span class="ot">&lt;-</span> <span class="fu">list</span>(<span class="at">lab.col =</span> col, <span class="at">pch =</span> <span class="cn">NA</span>)</span>
+<span id="cb23-10"><a href="#cb23-10" aria-hidden="true" tabindex="-1"></a>    <span class="fu">attr</span>(node, <span class="st">"edgePar"</span>) <span class="ot">&lt;-</span> <span class="fu">list</span>(<span class="at">col =</span> col, <span class="at">lwd =</span> <span class="dv">2</span>)</span>
+<span id="cb23-11"><a href="#cb23-11" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb23-12"><a href="#cb23-12" aria-hidden="true" tabindex="-1"></a>  node</span>
+<span id="cb23-13"><a href="#cb23-13" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb23-14"><a href="#cb23-14" aria-hidden="true" tabindex="-1"></a>dend <span class="ot">&lt;-</span> <span class="fu">dendrapply</span>(dend, colour_leaf)</span>
+<span id="cb23-15"><a href="#cb23-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb23-16"><a href="#cb23-16" aria-hidden="true" tabindex="-1"></a><span class="fu">par</span>(<span class="at">mar =</span> <span class="fu">c</span>(<span class="dv">5</span>, <span class="dv">2</span>, <span class="dv">3</span>, <span class="dv">7</span>))</span>
+<span id="cb23-17"><a href="#cb23-17" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(dend, <span class="at">horiz =</span> <span class="cn">TRUE</span>,</span>
+<span id="cb23-18"><a href="#cb23-18" aria-hidden="true" tabindex="-1"></a>     <span class="at">main =</span> <span class="st">"Сходство авторов по стилю"</span>,</span>
+<span id="cb23-19"><a href="#cb23-19" aria-hidden="true" tabindex="-1"></a>     <span class="at">xlab =</span> <span class="st">"Расстояние (дельта Берроуза)"</span>)</span></code></pre></div><button title="Скопировать текст" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
 <div class="cell-output-display">
 <div id="fig-tree" class="quarto-float quarto-figure quarto-figure-center anchored">
@@ -1686,7 +1700,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </div>
 </div>
 </div>
-<p>На дереве три сестры Бронте (<code>AB</code>, <code>CB</code>, <code>EB</code>) образуют единый кластер: их стили заметно ближе друг к другу, чем к любому другому автору. Эмили примыкает к Шарлотте — поэтому именно к ней модель и относит «Грозовой перевал», когда не видела ни одного фрагмента Эмили в обучении. Это не ошибка модели, а прямое следствие стилистического родства сестер: атрибутировать класс, у которого нет ни одного обучающего примера, в принципе невозможно.</p>
+<p>На дереве три сестры Бронте (<code>AB</code>, <code>CB</code>, <code>EB</code>) образуют единый кластер: их стили заметно ближе друг к другу, чем к любому другому автору. Эмили примыкает к Шарлотте — поэтому именно к ней модель и относит «Грозовой перевал», когда не видела ни одного фрагмента Эмили в обучении.</p>
 </section>
 <section id="важность-признаков-rf-и-коэффициенты-glmnet" class="level2" data-number="8.3">
 <h2 data-number="8.3" class="anchored" data-anchor-id="важность-признаков-rf-и-коэффициенты-glmnet"><span class="header-section-number">8.3</span> Важность признаков (RF) и коэффициенты (glmnet)</h2>
@@ -1761,14 +1775,10 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <p><strong>Значимые предикторы интерпретируемы.</strong> Стерн опознается по рекордной плотности тире. Остин — по словам свободно-косвенного дискурса (<code>every</code>, <code>could</code>, <code>must</code>, <code>herself</code>). Ричардсон — по <code>letter</code>, <code>dear</code> и высокой плотности запятой, что прямо вытекает из эпистолярной формы. Диккенс, Теккерей и Троллоп — по длинным предложениям и обилию точек с запятой.</p>
 <p>Главное ограничение — Эмили Бронте. При проверке «один роман отложен» «Грозовой перевал» неминуемо приписывается Шарлотте Бронте. Модель не видела ни одного чанка Эмили в обучении, а работы сестер Бронте стилистически близки, что подтверждает и дерево сходства авторов.</p>
 <p>Стратификация по чанкам дает почти 100% точности, но в тест попадали чанки обучающей выборки. Групповая кросс-валидация снизила оценку примерно на 5 процентных пункта.</p>
-<section id="что-можно-улучшить-дальше" class="level2" data-number="9.1">
-<h2 data-number="9.1" class="anchored" data-anchor-id="что-можно-улучшить-дальше"><span class="header-section-number">9.1</span> Что можно улучшить дальше</h2>
-<p>Анализ можно расширить. Имеет смысл добавить дельту Берроуза как отдельную модель-бейзлайн, подключить частоты частей речи и символьные триграммы — известно, что эти признаки часто улучшают качество стилометрической атрибуции.</p>
 
 
 <!-- -->
 
-</section>
 </section>
 
 </main> <!-- /main -->
@@ -2931,93 +2941,101 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb26-720"><a href="#cb26-720" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
 <span id="cb26-721"><a href="#cb26-721" aria-hidden="true" tabindex="-1"></a><span class="co">#| label: fig-tree</span></span>
 <span id="cb26-722"><a href="#cb26-722" aria-hidden="true" tabindex="-1"></a><span class="co">#| fig-cap: "Дерево сходства авторов по 200 MFW (дельта Берроуза)"</span></span>
-<span id="cb26-723"><a href="#cb26-723" aria-hidden="true" tabindex="-1"></a><span class="co">#| fig-height: 5</span></span>
+<span id="cb26-723"><a href="#cb26-723" aria-hidden="true" tabindex="-1"></a><span class="co">#| fig-height: 6</span></span>
 <span id="cb26-724"><a href="#cb26-724" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb26-725"><a href="#cb26-725" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(author_tree, <span class="at">hang =</span> <span class="sc">-</span><span class="dv">1</span>, <span class="at">main =</span> <span class="st">"Сходство авторов по стилю"</span>,</span>
-<span id="cb26-726"><a href="#cb26-726" aria-hidden="true" tabindex="-1"></a>     <span class="at">xlab =</span> <span class="st">""</span>, <span class="at">ylab =</span> <span class="st">"Расстояние (дельта Берроуза)"</span>, <span class="at">sub =</span> <span class="st">""</span>)</span>
-<span id="cb26-727"><a href="#cb26-727" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb26-725"><a href="#cb26-725" aria-hidden="true" tabindex="-1"></a><span class="co"># Сёстры Бронте выделяются цветом, остальные авторы — серым.</span></span>
+<span id="cb26-726"><a href="#cb26-726" aria-hidden="true" tabindex="-1"></a>bronte <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">"AB"</span>, <span class="st">"CB"</span>, <span class="st">"EB"</span>)</span>
+<span id="cb26-727"><a href="#cb26-727" aria-hidden="true" tabindex="-1"></a>dend <span class="ot">&lt;-</span> <span class="fu">as.dendrogram</span>(author_tree)</span>
 <span id="cb26-728"><a href="#cb26-728" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb26-729"><a href="#cb26-729" aria-hidden="true" tabindex="-1"></a>На дереве три сестры Бронте (<span class="in">`AB`</span>, <span class="in">`CB`</span>, <span class="in">`EB`</span>) образуют единый</span>
-<span id="cb26-730"><a href="#cb26-730" aria-hidden="true" tabindex="-1"></a>кластер: их стили заметно ближе друг к другу, чем к любому другому</span>
-<span id="cb26-731"><a href="#cb26-731" aria-hidden="true" tabindex="-1"></a>автору. Эмили примыкает к Шарлотте — поэтому именно к ней модель и</span>
-<span id="cb26-732"><a href="#cb26-732" aria-hidden="true" tabindex="-1"></a>относит «Грозовой перевал», когда не видела ни одного фрагмента</span>
-<span id="cb26-733"><a href="#cb26-733" aria-hidden="true" tabindex="-1"></a>Эмили в обучении. Это не ошибка модели, а прямое следствие</span>
-<span id="cb26-734"><a href="#cb26-734" aria-hidden="true" tabindex="-1"></a>стилистического родства сестер: атрибутировать класс, у которого нет</span>
-<span id="cb26-735"><a href="#cb26-735" aria-hidden="true" tabindex="-1"></a>ни одного обучающего примера, в принципе невозможно.</span>
-<span id="cb26-736"><a href="#cb26-736" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb26-737"><a href="#cb26-737" aria-hidden="true" tabindex="-1"></a><span class="fu">## Важность признаков (RF) и коэффициенты (glmnet)</span></span>
-<span id="cb26-738"><a href="#cb26-738" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb26-741"><a href="#cb26-741" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
-<span id="cb26-742"><a href="#cb26-742" aria-hidden="true" tabindex="-1"></a><span class="co">#| label: fig-vip-rf</span></span>
-<span id="cb26-743"><a href="#cb26-743" aria-hidden="true" tabindex="-1"></a><span class="co">#| fig-cap: "Важность признаков по Random Forest"</span></span>
-<span id="cb26-744"><a href="#cb26-744" aria-hidden="true" tabindex="-1"></a><span class="co">#| fig-height: 5</span></span>
+<span id="cb26-729"><a href="#cb26-729" aria-hidden="true" tabindex="-1"></a>colour_leaf <span class="ot">&lt;-</span> \(node) {</span>
+<span id="cb26-730"><a href="#cb26-730" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (<span class="fu">is.leaf</span>(node)) {</span>
+<span id="cb26-731"><a href="#cb26-731" aria-hidden="true" tabindex="-1"></a>    lab <span class="ot">&lt;-</span> <span class="fu">attr</span>(node, <span class="st">"label"</span>)</span>
+<span id="cb26-732"><a href="#cb26-732" aria-hidden="true" tabindex="-1"></a>    col <span class="ot">&lt;-</span> <span class="cf">if</span> (lab <span class="sc">%in%</span> bronte) <span class="st">"#c0392b"</span> <span class="cf">else</span> <span class="st">"#1e3a5f"</span></span>
+<span id="cb26-733"><a href="#cb26-733" aria-hidden="true" tabindex="-1"></a>    <span class="fu">attr</span>(node, <span class="st">"nodePar"</span>) <span class="ot">&lt;-</span> <span class="fu">list</span>(<span class="at">lab.col =</span> col, <span class="at">pch =</span> <span class="cn">NA</span>)</span>
+<span id="cb26-734"><a href="#cb26-734" aria-hidden="true" tabindex="-1"></a>    <span class="fu">attr</span>(node, <span class="st">"edgePar"</span>) <span class="ot">&lt;-</span> <span class="fu">list</span>(<span class="at">col =</span> col, <span class="at">lwd =</span> <span class="dv">2</span>)</span>
+<span id="cb26-735"><a href="#cb26-735" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb26-736"><a href="#cb26-736" aria-hidden="true" tabindex="-1"></a>  node</span>
+<span id="cb26-737"><a href="#cb26-737" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb26-738"><a href="#cb26-738" aria-hidden="true" tabindex="-1"></a>dend <span class="ot">&lt;-</span> <span class="fu">dendrapply</span>(dend, colour_leaf)</span>
+<span id="cb26-739"><a href="#cb26-739" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb26-740"><a href="#cb26-740" aria-hidden="true" tabindex="-1"></a><span class="fu">par</span>(<span class="at">mar =</span> <span class="fu">c</span>(<span class="dv">5</span>, <span class="dv">2</span>, <span class="dv">3</span>, <span class="dv">7</span>))</span>
+<span id="cb26-741"><a href="#cb26-741" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(dend, <span class="at">horiz =</span> <span class="cn">TRUE</span>,</span>
+<span id="cb26-742"><a href="#cb26-742" aria-hidden="true" tabindex="-1"></a>     <span class="at">main =</span> <span class="st">"Сходство авторов по стилю"</span>,</span>
+<span id="cb26-743"><a href="#cb26-743" aria-hidden="true" tabindex="-1"></a>     <span class="at">xlab =</span> <span class="st">"Расстояние (дельта Берроуза)"</span>)</span>
+<span id="cb26-744"><a href="#cb26-744" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
 <span id="cb26-745"><a href="#cb26-745" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb26-746"><a href="#cb26-746" aria-hidden="true" tabindex="-1"></a><span class="fu">vip</span>(final_rf, <span class="at">num_features =</span> <span class="dv">25</span>,</span>
-<span id="cb26-747"><a href="#cb26-747" aria-hidden="true" tabindex="-1"></a>    <span class="at">aesthetics =</span> <span class="fu">list</span>(<span class="at">fill =</span> <span class="st">"#1e3a5f"</span>, <span class="at">alpha =</span> .<span class="dv">8</span>)) <span class="sc">+</span></span>
-<span id="cb26-748"><a href="#cb26-748" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">title =</span> <span class="st">"Топ-25 предикторов"</span>)</span>
-<span id="cb26-749"><a href="#cb26-749" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
-<span id="cb26-750"><a href="#cb26-750" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb26-753"><a href="#cb26-753" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
-<span id="cb26-754"><a href="#cb26-754" aria-hidden="true" tabindex="-1"></a><span class="co">#| label: fig-vip-glmnet</span></span>
-<span id="cb26-755"><a href="#cb26-755" aria-hidden="true" tabindex="-1"></a><span class="co">#| fig-cap: "Топ положительных коэффициентов по автору"</span></span>
-<span id="cb26-756"><a href="#cb26-756" aria-hidden="true" tabindex="-1"></a><span class="co">#| fig-height: 7</span></span>
-<span id="cb26-757"><a href="#cb26-757" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb26-758"><a href="#cb26-758" aria-hidden="true" tabindex="-1"></a>mn_fit <span class="ot">&lt;-</span> <span class="fu">extract_fit_engine</span>(final_multinom)</span>
-<span id="cb26-759"><a href="#cb26-759" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb26-760"><a href="#cb26-760" aria-hidden="true" tabindex="-1"></a><span class="co"># Индекс шага, лучше всего соответствующий выбранной penalty</span></span>
-<span id="cb26-761"><a href="#cb26-761" aria-hidden="true" tabindex="-1"></a>lam_idx <span class="ot">&lt;-</span> <span class="fu">which.min</span>(<span class="fu">abs</span>(mn_fit<span class="sc">$</span>lambda <span class="sc">-</span> best_multinom<span class="sc">$</span>penalty))</span>
-<span id="cb26-762"><a href="#cb26-762" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb26-763"><a href="#cb26-763" aria-hidden="true" tabindex="-1"></a>coefs <span class="ot">&lt;-</span> <span class="fu">map_dfr</span>(<span class="fu">names</span>(mn_fit<span class="sc">$</span>beta), \(cl) {</span>
-<span id="cb26-764"><a href="#cb26-764" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tibble</span>(<span class="at">class   =</span> cl,</span>
-<span id="cb26-765"><a href="#cb26-765" aria-hidden="true" tabindex="-1"></a>         <span class="at">feature =</span> <span class="fu">rownames</span>(mn_fit<span class="sc">$</span>beta[[cl]]),</span>
-<span id="cb26-766"><a href="#cb26-766" aria-hidden="true" tabindex="-1"></a>         <span class="at">coef    =</span> <span class="fu">as.numeric</span>(mn_fit<span class="sc">$</span>beta[[cl]][, lam_idx]))</span>
-<span id="cb26-767"><a href="#cb26-767" aria-hidden="true" tabindex="-1"></a>}) <span class="sc">|&gt;</span></span>
-<span id="cb26-768"><a href="#cb26-768" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(coef <span class="sc">!=</span> <span class="dv">0</span>)</span>
-<span id="cb26-769"><a href="#cb26-769" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb26-770"><a href="#cb26-770" aria-hidden="true" tabindex="-1"></a>top_pos <span class="ot">&lt;-</span> coefs <span class="sc">|&gt;</span></span>
-<span id="cb26-771"><a href="#cb26-771" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(class) <span class="sc">|&gt;</span></span>
-<span id="cb26-772"><a href="#cb26-772" aria-hidden="true" tabindex="-1"></a>  <span class="fu">slice_max</span>(coef, <span class="at">n =</span> <span class="dv">6</span>, <span class="at">with_ties =</span> <span class="cn">FALSE</span>) <span class="sc">|&gt;</span></span>
-<span id="cb26-773"><a href="#cb26-773" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ungroup</span>()</span>
+<span id="cb26-746"><a href="#cb26-746" aria-hidden="true" tabindex="-1"></a>На дереве три сестры Бронте (<span class="in">`AB`</span>, <span class="in">`CB`</span>, <span class="in">`EB`</span>) образуют единый</span>
+<span id="cb26-747"><a href="#cb26-747" aria-hidden="true" tabindex="-1"></a>кластер: их стили заметно ближе друг к другу, чем к любому другому</span>
+<span id="cb26-748"><a href="#cb26-748" aria-hidden="true" tabindex="-1"></a>автору. Эмили примыкает к Шарлотте — поэтому именно к ней модель и</span>
+<span id="cb26-749"><a href="#cb26-749" aria-hidden="true" tabindex="-1"></a>относит «Грозовой перевал», когда не видела ни одного фрагмента</span>
+<span id="cb26-750"><a href="#cb26-750" aria-hidden="true" tabindex="-1"></a>Эмили в обучении.</span>
+<span id="cb26-751"><a href="#cb26-751" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb26-752"><a href="#cb26-752" aria-hidden="true" tabindex="-1"></a><span class="fu">## Важность признаков (RF) и коэффициенты (glmnet)</span></span>
+<span id="cb26-753"><a href="#cb26-753" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb26-756"><a href="#cb26-756" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb26-757"><a href="#cb26-757" aria-hidden="true" tabindex="-1"></a><span class="co">#| label: fig-vip-rf</span></span>
+<span id="cb26-758"><a href="#cb26-758" aria-hidden="true" tabindex="-1"></a><span class="co">#| fig-cap: "Важность признаков по Random Forest"</span></span>
+<span id="cb26-759"><a href="#cb26-759" aria-hidden="true" tabindex="-1"></a><span class="co">#| fig-height: 5</span></span>
+<span id="cb26-760"><a href="#cb26-760" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb26-761"><a href="#cb26-761" aria-hidden="true" tabindex="-1"></a><span class="fu">vip</span>(final_rf, <span class="at">num_features =</span> <span class="dv">25</span>,</span>
+<span id="cb26-762"><a href="#cb26-762" aria-hidden="true" tabindex="-1"></a>    <span class="at">aesthetics =</span> <span class="fu">list</span>(<span class="at">fill =</span> <span class="st">"#1e3a5f"</span>, <span class="at">alpha =</span> .<span class="dv">8</span>)) <span class="sc">+</span></span>
+<span id="cb26-763"><a href="#cb26-763" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">title =</span> <span class="st">"Топ-25 предикторов"</span>)</span>
+<span id="cb26-764"><a href="#cb26-764" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb26-765"><a href="#cb26-765" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb26-768"><a href="#cb26-768" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb26-769"><a href="#cb26-769" aria-hidden="true" tabindex="-1"></a><span class="co">#| label: fig-vip-glmnet</span></span>
+<span id="cb26-770"><a href="#cb26-770" aria-hidden="true" tabindex="-1"></a><span class="co">#| fig-cap: "Топ положительных коэффициентов по автору"</span></span>
+<span id="cb26-771"><a href="#cb26-771" aria-hidden="true" tabindex="-1"></a><span class="co">#| fig-height: 7</span></span>
+<span id="cb26-772"><a href="#cb26-772" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb26-773"><a href="#cb26-773" aria-hidden="true" tabindex="-1"></a>mn_fit <span class="ot">&lt;-</span> <span class="fu">extract_fit_engine</span>(final_multinom)</span>
 <span id="cb26-774"><a href="#cb26-774" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb26-775"><a href="#cb26-775" aria-hidden="true" tabindex="-1"></a>top_pos <span class="sc">|&gt;</span></span>
-<span id="cb26-776"><a href="#cb26-776" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggplot</span>(<span class="fu">aes</span>(coef, <span class="fu">fct_reorder2</span>(feature, class, coef), <span class="at">fill =</span> class)) <span class="sc">+</span></span>
-<span id="cb26-777"><a href="#cb26-777" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_col</span>() <span class="sc">+</span></span>
-<span id="cb26-778"><a href="#cb26-778" aria-hidden="true" tabindex="-1"></a>  <span class="fu">facet_wrap</span>(<span class="sc">~</span> class, <span class="at">scales =</span> <span class="st">"free_y"</span>, <span class="at">ncol =</span> <span class="dv">3</span>) <span class="sc">+</span></span>
-<span id="cb26-779"><a href="#cb26-779" aria-hidden="true" tabindex="-1"></a>  <span class="fu">guides</span>(<span class="at">fill =</span> <span class="st">"none"</span>) <span class="sc">+</span></span>
-<span id="cb26-780"><a href="#cb26-780" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">title =</span> <span class="st">"Топ положительных коэффициентов"</span>,</span>
-<span id="cb26-781"><a href="#cb26-781" aria-hidden="true" tabindex="-1"></a>       <span class="at">x =</span> <span class="st">"Коэффициент glmnet"</span>, <span class="at">y =</span> <span class="cn">NULL</span>) <span class="sc">+</span></span>
-<span id="cb26-782"><a href="#cb26-782" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme</span>(<span class="at">strip.text =</span> <span class="fu">element_text</span>(<span class="at">face =</span> <span class="st">"bold"</span>))</span>
-<span id="cb26-783"><a href="#cb26-783" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb26-775"><a href="#cb26-775" aria-hidden="true" tabindex="-1"></a><span class="co"># Индекс шага, лучше всего соответствующий выбранной penalty</span></span>
+<span id="cb26-776"><a href="#cb26-776" aria-hidden="true" tabindex="-1"></a>lam_idx <span class="ot">&lt;-</span> <span class="fu">which.min</span>(<span class="fu">abs</span>(mn_fit<span class="sc">$</span>lambda <span class="sc">-</span> best_multinom<span class="sc">$</span>penalty))</span>
+<span id="cb26-777"><a href="#cb26-777" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb26-778"><a href="#cb26-778" aria-hidden="true" tabindex="-1"></a>coefs <span class="ot">&lt;-</span> <span class="fu">map_dfr</span>(<span class="fu">names</span>(mn_fit<span class="sc">$</span>beta), \(cl) {</span>
+<span id="cb26-779"><a href="#cb26-779" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tibble</span>(<span class="at">class   =</span> cl,</span>
+<span id="cb26-780"><a href="#cb26-780" aria-hidden="true" tabindex="-1"></a>         <span class="at">feature =</span> <span class="fu">rownames</span>(mn_fit<span class="sc">$</span>beta[[cl]]),</span>
+<span id="cb26-781"><a href="#cb26-781" aria-hidden="true" tabindex="-1"></a>         <span class="at">coef    =</span> <span class="fu">as.numeric</span>(mn_fit<span class="sc">$</span>beta[[cl]][, lam_idx]))</span>
+<span id="cb26-782"><a href="#cb26-782" aria-hidden="true" tabindex="-1"></a>}) <span class="sc">|&gt;</span></span>
+<span id="cb26-783"><a href="#cb26-783" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(coef <span class="sc">!=</span> <span class="dv">0</span>)</span>
 <span id="cb26-784"><a href="#cb26-784" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb26-785"><a href="#cb26-785" aria-hidden="true" tabindex="-1"></a><span class="fu"># Выводы</span></span>
-<span id="cb26-786"><a href="#cb26-786" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb26-787"><a href="#cb26-787" aria-hidden="true" tabindex="-1"></a>Лучшая модель — мультиномиальная регрессия на</span>
-<span id="cb26-788"><a href="#cb26-788" aria-hidden="true" tabindex="-1"></a>200 MFW и структурных признаках. Она достигает CV-accuracy около 95% при</span>
-<span id="cb26-789"><a href="#cb26-789" aria-hidden="true" tabindex="-1"></a>честной группировке по книге, и верно атрибутирует 26 из 27 романов.</span>
-<span id="cb26-790"><a href="#cb26-790" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb26-791"><a href="#cb26-791" aria-hidden="true" tabindex="-1"></a>**Линейная модель опередила Random Forest** примерно на 15 процентных пунктов. На стандартизированных частотах служебных слов признаки почти линейно разделимы, и регуляризованный логит работает оптимально, тогда как лес дробит диапазон на пороги и теряет масштабную информацию.</span>
-<span id="cb26-792"><a href="#cb26-792" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb26-793"><a href="#cb26-793" aria-hidden="true" tabindex="-1"></a>**Значимые предикторы интерпретируемы.** Стерн опознается по рекордной</span>
-<span id="cb26-794"><a href="#cb26-794" aria-hidden="true" tabindex="-1"></a>плотности тире. Остин — по словам свободно-косвенного дискурса</span>
-<span id="cb26-795"><a href="#cb26-795" aria-hidden="true" tabindex="-1"></a>(<span class="in">`every`</span>, <span class="in">`could`</span>, <span class="in">`must`</span>, <span class="in">`herself`</span>). Ричардсон — по <span class="in">`letter`</span>, <span class="in">`dear`</span></span>
-<span id="cb26-796"><a href="#cb26-796" aria-hidden="true" tabindex="-1"></a>и высокой плотности запятой, что прямо вытекает из эпистолярной формы.</span>
-<span id="cb26-797"><a href="#cb26-797" aria-hidden="true" tabindex="-1"></a>Диккенс, Теккерей и Троллоп — по длинным предложениям и обилию точек с</span>
-<span id="cb26-798"><a href="#cb26-798" aria-hidden="true" tabindex="-1"></a>запятой.</span>
+<span id="cb26-785"><a href="#cb26-785" aria-hidden="true" tabindex="-1"></a>top_pos <span class="ot">&lt;-</span> coefs <span class="sc">|&gt;</span></span>
+<span id="cb26-786"><a href="#cb26-786" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(class) <span class="sc">|&gt;</span></span>
+<span id="cb26-787"><a href="#cb26-787" aria-hidden="true" tabindex="-1"></a>  <span class="fu">slice_max</span>(coef, <span class="at">n =</span> <span class="dv">6</span>, <span class="at">with_ties =</span> <span class="cn">FALSE</span>) <span class="sc">|&gt;</span></span>
+<span id="cb26-788"><a href="#cb26-788" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ungroup</span>()</span>
+<span id="cb26-789"><a href="#cb26-789" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb26-790"><a href="#cb26-790" aria-hidden="true" tabindex="-1"></a>top_pos <span class="sc">|&gt;</span></span>
+<span id="cb26-791"><a href="#cb26-791" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggplot</span>(<span class="fu">aes</span>(coef, <span class="fu">fct_reorder2</span>(feature, class, coef), <span class="at">fill =</span> class)) <span class="sc">+</span></span>
+<span id="cb26-792"><a href="#cb26-792" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_col</span>() <span class="sc">+</span></span>
+<span id="cb26-793"><a href="#cb26-793" aria-hidden="true" tabindex="-1"></a>  <span class="fu">facet_wrap</span>(<span class="sc">~</span> class, <span class="at">scales =</span> <span class="st">"free_y"</span>, <span class="at">ncol =</span> <span class="dv">3</span>) <span class="sc">+</span></span>
+<span id="cb26-794"><a href="#cb26-794" aria-hidden="true" tabindex="-1"></a>  <span class="fu">guides</span>(<span class="at">fill =</span> <span class="st">"none"</span>) <span class="sc">+</span></span>
+<span id="cb26-795"><a href="#cb26-795" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">title =</span> <span class="st">"Топ положительных коэффициентов"</span>,</span>
+<span id="cb26-796"><a href="#cb26-796" aria-hidden="true" tabindex="-1"></a>       <span class="at">x =</span> <span class="st">"Коэффициент glmnet"</span>, <span class="at">y =</span> <span class="cn">NULL</span>) <span class="sc">+</span></span>
+<span id="cb26-797"><a href="#cb26-797" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme</span>(<span class="at">strip.text =</span> <span class="fu">element_text</span>(<span class="at">face =</span> <span class="st">"bold"</span>))</span>
+<span id="cb26-798"><a href="#cb26-798" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
 <span id="cb26-799"><a href="#cb26-799" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb26-800"><a href="#cb26-800" aria-hidden="true" tabindex="-1"></a>Главное ограничение — Эмили Бронте. При проверке «один роман</span>
-<span id="cb26-801"><a href="#cb26-801" aria-hidden="true" tabindex="-1"></a>отложен» «Грозовой перевал» неминуемо приписывается Шарлотте Бронте.</span>
-<span id="cb26-802"><a href="#cb26-802" aria-hidden="true" tabindex="-1"></a>Модель не видела ни одного чанка Эмили в обучении, а работы сестер Бронте</span>
-<span id="cb26-803"><a href="#cb26-803" aria-hidden="true" tabindex="-1"></a>стилистически близки, что подтверждает и дерево сходства авторов.</span>
-<span id="cb26-804"><a href="#cb26-804" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb26-805"><a href="#cb26-805" aria-hidden="true" tabindex="-1"></a>Стратификация по чанкам дает почти 100% точности, но в тест попадали чанки обучающей выборки.</span>
-<span id="cb26-806"><a href="#cb26-806" aria-hidden="true" tabindex="-1"></a>Групповая кросс-валидация снизила оценку примерно на 5 процентных пункта.</span>
+<span id="cb26-800"><a href="#cb26-800" aria-hidden="true" tabindex="-1"></a><span class="fu"># Выводы</span></span>
+<span id="cb26-801"><a href="#cb26-801" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb26-802"><a href="#cb26-802" aria-hidden="true" tabindex="-1"></a>Лучшая модель — мультиномиальная регрессия на</span>
+<span id="cb26-803"><a href="#cb26-803" aria-hidden="true" tabindex="-1"></a>200 MFW и структурных признаках. Она достигает CV-accuracy около 95% при</span>
+<span id="cb26-804"><a href="#cb26-804" aria-hidden="true" tabindex="-1"></a>честной группировке по книге, и верно атрибутирует 26 из 27 романов.</span>
+<span id="cb26-805"><a href="#cb26-805" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb26-806"><a href="#cb26-806" aria-hidden="true" tabindex="-1"></a>**Линейная модель опередила Random Forest** примерно на 15 процентных пунктов. На стандартизированных частотах служебных слов признаки почти линейно разделимы, и регуляризованный логит работает оптимально, тогда как лес дробит диапазон на пороги и теряет масштабную информацию.</span>
 <span id="cb26-807"><a href="#cb26-807" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb26-808"><a href="#cb26-808" aria-hidden="true" tabindex="-1"></a><span class="fu">## Что можно улучшить дальше</span></span>
-<span id="cb26-809"><a href="#cb26-809" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb26-810"><a href="#cb26-810" aria-hidden="true" tabindex="-1"></a>Анализ можно расширить. Имеет смысл добавить дельту Берроуза как</span>
-<span id="cb26-811"><a href="#cb26-811" aria-hidden="true" tabindex="-1"></a>отдельную модель-бейзлайн, подключить частоты частей речи и</span>
-<span id="cb26-812"><a href="#cb26-812" aria-hidden="true" tabindex="-1"></a>символьные триграммы — известно, что эти признаки часто улучшают</span>
-<span id="cb26-813"><a href="#cb26-813" aria-hidden="true" tabindex="-1"></a>качество стилометрической атрибуции.</span>
+<span id="cb26-808"><a href="#cb26-808" aria-hidden="true" tabindex="-1"></a>**Значимые предикторы интерпретируемы.** Стерн опознается по рекордной</span>
+<span id="cb26-809"><a href="#cb26-809" aria-hidden="true" tabindex="-1"></a>плотности тире. Остин — по словам свободно-косвенного дискурса</span>
+<span id="cb26-810"><a href="#cb26-810" aria-hidden="true" tabindex="-1"></a>(<span class="in">`every`</span>, <span class="in">`could`</span>, <span class="in">`must`</span>, <span class="in">`herself`</span>). Ричардсон — по <span class="in">`letter`</span>, <span class="in">`dear`</span></span>
+<span id="cb26-811"><a href="#cb26-811" aria-hidden="true" tabindex="-1"></a>и высокой плотности запятой, что прямо вытекает из эпистолярной формы.</span>
+<span id="cb26-812"><a href="#cb26-812" aria-hidden="true" tabindex="-1"></a>Диккенс, Теккерей и Троллоп — по длинным предложениям и обилию точек с</span>
+<span id="cb26-813"><a href="#cb26-813" aria-hidden="true" tabindex="-1"></a>запятой.</span>
+<span id="cb26-814"><a href="#cb26-814" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb26-815"><a href="#cb26-815" aria-hidden="true" tabindex="-1"></a>Главное ограничение — Эмили Бронте. При проверке «один роман</span>
+<span id="cb26-816"><a href="#cb26-816" aria-hidden="true" tabindex="-1"></a>отложен» «Грозовой перевал» неминуемо приписывается Шарлотте Бронте.</span>
+<span id="cb26-817"><a href="#cb26-817" aria-hidden="true" tabindex="-1"></a>Модель не видела ни одного чанка Эмили в обучении, а работы сестер Бронте</span>
+<span id="cb26-818"><a href="#cb26-818" aria-hidden="true" tabindex="-1"></a>стилистически близки, что подтверждает и дерево сходства авторов.</span>
+<span id="cb26-819"><a href="#cb26-819" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb26-820"><a href="#cb26-820" aria-hidden="true" tabindex="-1"></a>Стратификация по чанкам дает почти 100% точности, но в тест попадали чанки обучающей выборки.</span>
+<span id="cb26-821"><a href="#cb26-821" aria-hidden="true" tabindex="-1"></a>Групповая кросс-валидация снизила оценку примерно на 5 процентных пункта.</span>
 </code></pre></div><button title="Скопировать текст" class="code-copy-button" data-in-quarto-modal=""><i class="bi"></i></button></div>
 </div></div></div></div></div>
 </div> <!-- /content -->
