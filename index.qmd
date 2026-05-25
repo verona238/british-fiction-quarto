@@ -99,10 +99,6 @@ library(vip)
 library(patchwork)
 library(ggrepel)
 library(kableExtra)
-
-tidymodels_prefer()
-theme_set(theme_minimal(base_size = 12) +
-          theme(plot.title = element_text(face = "bold")))
 ```
 
 # Загрузка корпуса и метаданных
@@ -113,6 +109,10 @@ theme_set(theme_minimal(base_size = 12) +
 #| eval: false
 zip_file  <- "data/A_Small_Collection_of_British_Fiction.zip"
 overview_path <- "data/overview.tsv"
+
+if (!dir.exists("data/A_Small_Collection_of_British_Fiction")) {
+  unzip(zip_file, exdir = "data")
+}
 
 all_dirs  <- list.dirs("data", recursive = TRUE)
 corpus_dir <- all_dirs[basename(all_dirs) == "corpus"]
@@ -303,6 +303,10 @@ chunk_meta |>
 
 ```{r features-display}
 #| eval: false
+# stringr::fixed конфликтует с recipes::fixed — для подсчёта
+# знаков пунктуации ниже нужен именно stringr
+conflicted::conflicts_prefer(stringr::fixed)
+
 MFW_N <- 200
 
 # MFW
@@ -385,6 +389,13 @@ features |>
 # Разведывательный анализ
 
 ## Размер корпуса и баланс классов
+
+```{r theme-display}
+#| eval: false
+# единое оформление для всех графиков отчёта
+theme_set(theme_minimal(base_size = 12) +
+          theme(plot.title = element_text(face = "bold")))
+```
 
 ```{r}
 #| label: fig-balance
@@ -504,6 +515,10 @@ folds
 
 ```{r recipe-display}
 #| eval: false
+# tidymodels_prefer() убирает конфликты имён внутри tidymodels,
+# отдавая приоритет его функциям
+tidymodels_prefer()
+
 rec <- recipe(authorID ~ ., data = train_chunks) |>
   update_role(doc_id, book_id, author, n_tokens, new_role = "ID") |>
   step_zv(all_predictors()) |>
@@ -703,12 +718,27 @@ roc_data |>
 матрице показывает, какие авторы стилистически ближе всего друг к
 другу.
 
+```{r tree-display}
+#| eval: false
+mfw_cols <- grep("^mfw_", names(features), value = TRUE)
+
+author_profiles <- features |>
+  group_by(authorID) |>
+  summarise(across(all_of(mfw_cols), mean), .groups = "drop")
+
+prof_mat <- as.matrix(author_profiles[, mfw_cols])
+rownames(prof_mat) <- author_profiles$authorID
+prof_z <- scale(prof_mat)
+author_dist <- dist(prof_z, method = "manhattan")
+author_tree <- hclust(author_dist, method = "average")
+```
+
 ```{r}
 #| label: fig-tree
 #| fig-cap: "Дерево сходства авторов по 200 MFW (дельта Берроуза)"
 #| fig-height: 6
 
-# Сёстры Бронте выделяются цветом, остальные авторы — серым.
+# Сестры Бронте выделяются цветом, остальные авторы — серым.
 bronte <- c("AB", "CB", "EB")
 dend <- as.dendrogram(author_tree)
 
@@ -726,14 +756,16 @@ dend <- dendrapply(dend, colour_leaf)
 par(mar = c(5, 2, 3, 7))
 plot(dend, horiz = TRUE,
      main = "Сходство авторов по стилю",
-     xlab = "Расстояние (дельта Берроуза)")
+     xlab = "Расстояние по дельте Берроуза")
 ```
 
 На дереве три сестры Бронте (`AB`, `CB`, `EB`) образуют единый
 кластер: их стили заметно ближе друг к другу, чем к любому другому
 автору. Эмили примыкает к Шарлотте — поэтому именно к ней модель и
 относит «Грозовой перевал», когда не видела ни одного фрагмента
-Эмили в обучении.
+Эмили в обучении. Это не ошибка модели, а прямое следствие
+стилистического родства сестер: атрибутировать класс, у которого нет
+ни одного обучающего примера, в принципе невозможно.
 
 ## Важность признаков (RF) и коэффициенты (glmnet)
 
